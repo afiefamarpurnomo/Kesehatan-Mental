@@ -5,19 +5,20 @@ import (
 	"time"
 )
 
-type Penilaian struct {
-	ID         int
-	IDPengguna int
-	Tanggal    time.Time
-	Respon     []int
-	TotalSkor  int
-	Kategori   string
+// nyimpen data penilaian
+type penilaian struct {
+	id         int
+	idpengguna int
+	tanggal    time.Time
+	jawaban    []int
+	skor       int
+	level      string
 }
 
-var penilaians []Penilaian
+var datapenilaian []penilaian
 
-// Pertanyaan DASS-10 yang disesuaikan
-var pertanyaanDASS10 = []string{
+// pertanyaan
+var soaldass = []string{
 	"Saya merasa sulit untuk tenang setelah sesuatu yang mengganggu",
 	"Saya tidak dapat merasakan perasaan positif sama sekali",
 	"Saya merasa sulit untuk memulai melakukan sesuatu",
@@ -30,8 +31,8 @@ var pertanyaanDASS10 = []string{
 	"Saya merasa hidup tidak bermakna",
 }
 
-// Skala penilaian 1-5
-var skalaJawaban = []string{
+// opsi jawaban
+var pilihanjawabann = []string{
 	"1 - Tidak Pernah",
 	"2 - Kadang-kadang",
 	"3 - Sering",
@@ -39,206 +40,196 @@ var skalaJawaban = []string{
 	"5 - Selalu",
 }
 
-// untuk menghitung total skor dari array respon
-func hitungTotal(respon []int) int {
-	jumlah := 0
-	for _, nilai := range respon {
-		jumlah += nilai
+func hitungskor(jawaban []int) int {
+	total := 0
+	for _, nilai := range jawaban {
+		total += nilai
 	}
-	return jumlah
+	return total
 }
 
-// menentukan kategori berdasarkan total skor
-func tentukanKategori(totalSkor int) string {
-	if totalSkor >= 1 && totalSkor <= 10 {
-		return "Sangat ringan"
-	} else if totalSkor >= 11 && totalSkor <= 20 {
+func ceklevel(skor int) string {
+	switch {
+	case skor <= 10:
+		return "Normal"
+	case skor <= 20:
 		return "Ringan"
-	} else if totalSkor >= 21 && totalSkor <= 30 {
+	case skor <= 30:
 		return "Sedang"
-	} else if totalSkor >= 31 && totalSkor <= 40 {
-		return "Tinggi"
-	} else if totalSkor >= 41 && totalSkor <= 50 {
-		return "Sangat tinggi/kritis"
-	} else {
-		return "Skor tidak valid"
+	case skor <= 40:
+		return "Berat"
+	default:
+		return "Sangat Berat"
 	}
 }
 
-// menampilkan pertanyaan DASS-10 dan mengambil respon
-func tampilkanPertanyaan() []int {
-	respon := make([]int, len(pertanyaanDASS10))
+func isikuesioner() []int {
+	jawaban := make([]int, len(soaldass))
 
 	fmt.Println("\n=== KUESIONER DASS-10 ===")
-	fmt.Println("Jawab setiap pertanyaan berdasarkan pengalaman Anda dalam 2 minggu terakhir:")
-	fmt.Println("\nSkala Jawaban:")
-	for _, skala := range skalaJawaban {
-		fmt.Println(skala)
+	fmt.Println("Jawab berdasarkan kondisi 2 minggu terakhir:")
+	fmt.Println()
+	for _, pilihan := range pilihanjawabann {
+		fmt.Println(pilihan)
 	}
 	fmt.Println()
 
-	for i, pertanyaan := range pertanyaanDASS10 {
-		fmt.Printf("%d. %s\n", i+1, pertanyaan)
-		fmt.Print("Jawaban (1-5): ")
+	for i, soal := range soaldass {
+		fmt.Printf("%d. %s\n", i+1, soal)
+		fmt.Print("Pilih (1-5): ")
 
-		var jawaban int
+		var input int
 		for {
-			fmt.Scan(&jawaban)
-			if jawaban >= 1 && jawaban <= 5 {
-				respon[i] = jawaban
+			fmt.Scan(&input)
+			if input >= 1 && input <= 5 {
+				jawaban[i] = input
 				break
 			} else {
-				fmt.Print("Jawaban harus antara 1-5. Coba lagi: ")
+				fmt.Print("Input salah, coba lagi (1-5): ")
 			}
 		}
 		fmt.Println()
 	}
 
-	return respon
+	return jawaban
 }
 
-// menambah penilaian baru ke dalam slice penilaians
-func tambahPenilaian(id, idPengguna int) {
-	respon := tampilkanPertanyaan()
-	totalSkor := hitungTotal(respon)
-	kategori := tentukanKategori(totalSkor)
+func tambahdata(id, userid int) {
+	jawaban := isikuesioner()
+	skortotal := hitungskor(jawaban)
+	levelstress := ceklevel(skortotal)
 
-	penilaians = append(penilaians, Penilaian{
-		ID:         id,
-		IDPengguna: idPengguna,
-		Tanggal:    time.Now(),
-		Respon:     respon,
-		TotalSkor:  totalSkor,
-		Kategori:   kategori,
+	//tambah ke slice
+	datapenilaian = append(datapenilaian, penilaian{
+		id:         id,
+		idpengguna: userid,
+		tanggal:    time.Now(),
+		jawaban:    jawaban,
+		skor:       skortotal,
+		level:      levelstress,
 	})
 
-	fmt.Printf("\n=== HASIL PENILAIAN ===\n")
-	fmt.Printf("Total Skor: %d\n", totalSkor)
-	fmt.Printf("Kategori: %s\n", kategori)
-	fmt.Println("Penilaian berhasil ditambahkan.")
+	fmt.Printf("\n=== HASIL ===\n")
+	fmt.Printf("Skor: %d\n", skortotal)
+	fmt.Printf("Level: %s\n", levelstress)
 
-	// Rekomendasi berdasarkan kategori
-	tampilkanRekomendasi(kategori)
+	kasihsaran(levelstress)
 }
 
-// menampilkan rekomendasi berdasarkan kategori
-func tampilkanRekomendasi(kategori string) {
-	fmt.Printf("\n=== REKOMENDASI ===\n")
-	switch kategori {
-	case "Sangat ringan":
-		fmt.Println(" Kondisi mental Anda sangat baik. Pertahankan pola hidup sehat!")
-		fmt.Println(" Tips: Terus lakukan aktivitas positif, olahraga teratur, dan jaga pola tidur.")
-		fmt.Println(" Saran: Bisa menjadi mentor atau membantu orang lain yang membutuhkan dukungan.")
+func kasihsaran(level string) {
+	fmt.Printf("\n=== SARAN ===\n")
+	switch level {
+	case "Normal":
+		fmt.Println("Kondisi mental baik, pertahankan!")
+		fmt.Println("  Tips: Tetap olahraga dan jaga pola tidur")
 	case "Ringan":
-		fmt.Println(" Kondisi mental Anda cukup baik dengan sedikit tekanan normal.")
-		fmt.Println(" Tips: Luangkan waktu untuk relaksasi, hobi yang menyenangkan, atau bertemu teman.")
-		fmt.Println(" Saran: Coba teknik pernapasan dalam atau meditasi ringan 10-15 menit sehari.")
+		fmt.Println("Ada sedikit tekanan, tapi masih normal")
+		fmt.Println("  Tips: Coba relaksasi atau hobi yang disukai")
 	case "Sedang":
-		fmt.Println(" Anda mengalami tingkat stres/depresi/kecemasan yang perlu perhatian.")
-		fmt.Println(" Tips: Kurangi beban kerja, atur prioritas, dan cari dukungan dari orang terdekat.")
-		fmt.Println(" Saran: Pertimbangkan konseling dengan konselor atau psikolog untuk bantuan profesional.")
-	case "Tinggi":
-		fmt.Println(" Kondisi mental Anda memerlukan perhatian serius dan tindakan segera.")
-		fmt.Println(" Tips: Segera kurangi stressor, ambil cuti jika perlu, dan hindari keputusan besar.")
-		fmt.Println(" Saran: Sangat disarankan untuk segera berkonsultasi dengan psikolog atau psikiater.")
-	case "Sangat tinggi/kritis":
-		fmt.Println("KONDISI KRITIS - Memerlukan bantuan profesional segera!")
-		fmt.Println(" Tips: Jangan menghadapi sendirian, segera hubungi tenaga kesehatan mental.")
-		fmt.Println(" Saran: Hubungi hotline kesehatan mental atau kunjungi rumah sakit terdekat.")
-		fmt.Println("Darurat: Jika ada pikiran menyakiti diri, segera hubungi 119 atau IGD terdekat.")
+		fmt.Println("Perlu perhatian lebih")
+		fmt.Println("  Tips: Kurangi beban, cari dukungan keluarga/teman")
+		fmt.Println("  Saran: Pertimbangkan konseling")
+	case "Berat":
+		fmt.Println("Kondisi serius, butuh tindakan")
+		fmt.Println("  Tips: Kurangi stress, ambil cuti jika perlu")
+		fmt.Println("  Saran: Segera konsultasi psikolog/psikiater")
+	case "Sangat Berat":
+		fmt.Println("KONDISI KRITIS!")
+		fmt.Println("  Jangan sendirian, hubungi tenaga medis segera")
+		fmt.Println("  Darurat: Pikiran menyakiti diri -> hubungi 119")
 	}
 }
 
-// Untuk memperbarui penilaian berdasarkan ID
-func perbaruiPenilaian(id int) bool {
-	for i := range penilaians {
-		if penilaians[i].ID == id {
-			respon := tampilkanPertanyaan()
-			totalSkor := hitungTotal(respon)
-			kategori := tentukanKategori(totalSkor)
+// update data
+func updatedata(id int) bool {
+	for i := range datapenilaian {
+		if datapenilaian[i].id == id {
+			jawaban := isikuesioner()
+			skor := hitungskor(jawaban)
+			level := ceklevel(skor)
 
-			penilaians[i].Respon = respon
-			penilaians[i].TotalSkor = totalSkor
-			penilaians[i].Kategori = kategori
-			penilaians[i].Tanggal = time.Now()
+			datapenilaian[i].jawaban = jawaban
+			datapenilaian[i].skor = skor
+			datapenilaian[i].level = level
+			datapenilaian[i].tanggal = time.Now()
 
-			fmt.Printf("\n=== HASIL PENILAIAN TERBARU ===\n")
-			fmt.Printf("Total Skor: %d\n", totalSkor)
-			fmt.Printf("Kategori: %s\n", kategori)
-			tampilkanRekomendasi(kategori)
+			fmt.Printf("\n=== HASIL UPDATE ===\n")
+			fmt.Printf("Skor: %d\n", skor)
+			fmt.Printf("Level: %s\n", level)
+			kasihsaran(level)
 			return true
 		}
 	}
 	return false
 }
 
-// Untuk menghapus penilaian berdasarkan ID
-func hapusPenilaian(id int) bool {
-	for i, p := range penilaians {
-		if p.ID == id {
-			penilaians = append(penilaians[:i], penilaians[i+1:]...)
+func hapusdata(id int) bool {
+	for i, data := range datapenilaian {
+		if data.id == id {
+			datapenilaian = append(datapenilaian[:i], datapenilaian[i+1:]...)
 			return true
 		}
 	}
 	return false
 }
 
-// Selection sort berdasarkan skor
-func urutkanSelectionBySkor() {
-	n := len(penilaians)
+// selection sort berdasarkan skor
+func urutberdasarkanskor() {
+	n := len(datapenilaian)
 	for i := 0; i < n-1; i++ {
-		minIndex := i
+		minidx := i
 		for j := i + 1; j < n; j++ {
-			if penilaians[j].TotalSkor < penilaians[minIndex].TotalSkor {
-				minIndex = j
+			if datapenilaian[j].skor < datapenilaian[minidx].skor {
+				minidx = j
 			}
 		}
-		penilaians[i], penilaians[minIndex] = penilaians[minIndex], penilaians[i]
+		datapenilaian[i], datapenilaian[minidx] = datapenilaian[minidx], datapenilaian[i]
 	}
-	fmt.Println("Data telah diurutkan menggunakan Selection Sort berdasarkan skor.")
-	tampilkanSemua()
+	fmt.Println("Data sudah diurutkan berdasarkan skor (rendah ke tinggi)")
+	tampilkansemua()
 }
 
-// Insertion sort berdasarkan tanggal (terbaru ke terlama)
-func urutkanInsertionByTanggal() {
-	n := len(penilaians)
+// insertion sort berdasarkan tanggal
+func urutberdasarkantanggal() {
+	n := len(datapenilaian)
 	for i := 1; i < n; i++ {
-		kunci := penilaians[i]
+		key := datapenilaian[i]
 		j := i - 1
-		// Urutkan dari tanggal terbaru ke terlama
-		for j >= 0 && penilaians[j].Tanggal.Before(kunci.Tanggal) {
-			penilaians[j+1] = penilaians[j]
+
+		for j >= 0 && datapenilaian[j].tanggal.Before(key.tanggal) {
+			datapenilaian[j+1] = datapenilaian[j]
 			j--
 		}
-		penilaians[j+1] = kunci
+		datapenilaian[j+1] = key
 	}
-	fmt.Println("Data telah diurutkan menggunakan Insertion Sort berdasarkan tanggal (terbaru ke terlama).")
-	tampilkanSemua()
+	fmt.Println("Data sudah diurutkan berdasarkan tanggal (terbaru dulu)")
+	tampilkansemua()
 }
 
-// mengurutkan penilaian berdasarkan ID (ascending) untuk binary search
-func urutkanByID() {
-	n := len(penilaians)
+func urutkan() {
+	n := len(datapenilaian)
 	for i := 0; i < n-1; i++ {
-		minIndex := i
+		minidx := i
 		for j := i + 1; j < n; j++ {
-			if penilaians[j].ID < penilaians[minIndex].ID {
-				minIndex = j
+			if datapenilaian[j].id < datapenilaian[minidx].id {
+				minidx = j
 			}
 		}
-		penilaians[i], penilaians[minIndex] = penilaians[minIndex], penilaians[i]
+		datapenilaian[i], datapenilaian[minidx] = datapenilaian[minidx], datapenilaian[i]
 	}
 }
 
-// fungsi pencarian binary search berdasarkan ID penilaian
-func cariBinary(id int) *Penilaian {
-	urutkanByID()
-	low, high := 0, len(penilaians)-1
+func caribinary(id int) *penilaian {
+	urutkan()
+
+	low := 0
+	high := len(datapenilaian) - 1
+
 	for low <= high {
 		mid := (low + high) / 2
-		if penilaians[mid].ID == id {
-			return &penilaians[mid]
-		} else if penilaians[mid].ID < id {
+		if datapenilaian[mid].id == id {
+			return &datapenilaian[mid]
+		} else if datapenilaian[mid].id < id {
 			low = mid + 1
 		} else {
 			high = mid - 1
@@ -247,272 +238,268 @@ func cariBinary(id int) *Penilaian {
 	return nil
 }
 
-// pencarian sequential search berdasarkan ID penilaian
-func cariSequential(id int) *Penilaian {
-	for i := range penilaians {
-		if penilaians[i].ID == id {
-			return &penilaians[i]
+func carisequential(id int) *penilaian {
+	for i := range datapenilaian {
+		if datapenilaian[i].id == id {
+			return &datapenilaian[i]
 		}
 	}
 	return nil
 }
 
-// pencarian berdasarkan ID Pengguna
-func cariByIDPengguna(idPengguna int) []Penilaian {
-	var hasil []Penilaian
-	for _, p := range penilaians {
-		if p.IDPengguna == idPengguna {
-			hasil = append(hasil, p)
+// cari semua data
+func caridatauser(userid int) []penilaian {
+	var hasil []penilaian
+	for _, data := range datapenilaian {
+		if data.idpengguna == userid {
+			hasil = append(hasil, data)
 		}
 	}
 	return hasil
 }
 
-// menampilkan detail penilaian
-func tampilkanDetailPenilaian(p *Penilaian) {
+func tampilkandetail(p *penilaian) {
 	fmt.Printf("\n=== DETAIL PENILAIAN ===\n")
-	fmt.Printf("ID: %d\n", p.ID)
-	fmt.Printf("ID Pengguna: %d\n", p.IDPengguna)
-	fmt.Printf("Tanggal: %s\n", p.Tanggal.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Total Skor: %d\n", p.TotalSkor)
-	fmt.Printf("Kategori: %s\n", p.Kategori)
-	tampilkanRekomendasi(p.Kategori)
+	fmt.Printf("ID: %d\n", p.id)
+	fmt.Printf("User ID: %d\n", p.idpengguna)
+	fmt.Printf("Tanggal: %s\n", p.tanggal.Format("02/01/2006 15:04"))
+	fmt.Printf("Skor: %d\n", p.skor)
+	fmt.Printf("Level: %s\n", p.level)
+	kasihsaran(p.level)
 }
 
-// menampilkan laporan
-func tampilkanLaporan(idPengguna int) {
-	var penilaianUser []Penilaian
-	for _, p := range penilaians {
-		if p.IDPengguna == idPengguna {
-			penilaianUser = append(penilaianUser, p)
-		}
-	}
+// laporan untuk user
+func laporanuser(userid int) {
+	userdata := caridatauser(userid)
 
-	if len(penilaianUser) == 0 {
-		fmt.Println("Tidak ada data penilaian untuk pengguna ini.")
+	if len(userdata) == 0 {
+		fmt.Println("Ga ada data untuk user ini")
 		return
 	}
 
-	// Urutkan berdasarkan tanggal (terbaru ke terlama)
-	for i := 1; i < len(penilaianUser); i++ {
-		kunci := penilaianUser[i]
+	// urutkan tanggal
+	for i := 1; i < len(userdata); i++ {
+		key := userdata[i]
 		j := i - 1
-		for j >= 0 && penilaianUser[j].Tanggal.Before(kunci.Tanggal) {
-			penilaianUser[j+1] = penilaianUser[j]
+		for j >= 0 && userdata[j].tanggal.Before(key.tanggal) {
+			userdata[j+1] = userdata[j]
 			j--
 		}
-		penilaianUser[j+1] = kunci
+		userdata[j+1] = key
 	}
 
-	fmt.Printf("\n=== LAPORAN PENGGUNA ID: %d ===\n", idPengguna)
-	fmt.Println("\nLima Penilaian Terakhir:")
-	for i := 0; i < len(penilaianUser) && i < 5; i++ {
-		fmt.Printf("ID:%d Skor:%d Kategori:%s Tgl:%s\n",
-			penilaianUser[i].ID, penilaianUser[i].TotalSkor,
-			penilaianUser[i].Kategori, penilaianUser[i].Tanggal.Format("2006-01-02"))
+	fmt.Printf("\n=== LAPORAN USER %d ===\n", userid)
+	fmt.Println("\n5 Penilaian Terakhir:")
+
+	limit := len(userdata)
+	if limit > 5 {
+		limit = 5
 	}
 
-	// rata-rata skor 30 hari terakhir
-	batasTanggal := time.Now().AddDate(0, 0, -30)
-	totalSkor, jumlah := 0, 0
-	for _, p := range penilaianUser {
-		if p.Tanggal.After(batasTanggal) {
-			totalSkor += p.TotalSkor
-			jumlah++
+	for i := 0; i < limit; i++ {
+		fmt.Printf("ID:%d | Skor:%d | %s | %s\n",
+			userdata[i].id, userdata[i].skor,
+			userdata[i].level, userdata[i].tanggal.Format("02/01/06"))
+	}
+
+	// hitung rata2 30 hari
+	cutoff := time.Now().AddDate(0, 0, -30)
+	totalskor := 0
+	count := 0
+
+	for _, data := range userdata {
+		if data.tanggal.After(cutoff) {
+			totalskor += data.skor
+			count++
 		}
 	}
-	if jumlah > 0 {
-		rataRata := float64(totalSkor) / float64(jumlah)
-		fmt.Printf("\nRata-rata skor 30 hari terakhir: %.2f\n", rataRata)
-		fmt.Printf("Kategori rata-rata: %s\n", tentukanKategori(int(rataRata)))
+
+	if count > 0 {
+		avg := float64(totalskor) / float64(count)
+		fmt.Printf("\nRata-rata 30 hari terakhir: %.1f\n", avg)
+		fmt.Printf("Level rata-rata: %s\n", ceklevel(int(avg)))
 	} else {
-		fmt.Println("\nTidak ada data dalam 30 hari terakhir.")
+		fmt.Println("\nGa ada data 30 hari terakhir")
 	}
 }
 
-// tampilkan semua data penilaian
-func tampilkanSemua() {
-	if len(penilaians) == 0 {
-		fmt.Println("Tidak ada data penilaian.")
+func tampilkansemua() {
+	if len(datapenilaian) == 0 {
+		fmt.Println("Belum ada data")
 		return
 	}
-	fmt.Println("\n=== SEMUA DATA PENILAIAN ===")
-	fmt.Println("ID   IDPengguna  Skor  Kategori           Tanggal")
-	fmt.Println("--------------------------------------------------------")
-	for _, p := range penilaians {
-		fmt.Printf("%-4d %-11d %-5d %-18s %s\n",
-			p.ID, p.IDPengguna, p.TotalSkor, p.Kategori, p.Tanggal.Format("2006-01-02"))
+
+	fmt.Println("\n=== SEMUA DATA ===")
+	fmt.Printf("%-4s %-8s %-5s %-12s %s\n", "ID", "UserID", "Skor", "Level", "Tanggal")
+	fmt.Println("------------------------------------------")
+
+	for _, data := range datapenilaian {
+		fmt.Printf("%-4d %-8d %-5d %-12s %s\n",
+			data.id, data.idpengguna, data.skor,
+			data.level, data.tanggal.Format("02/01/06"))
 	}
 }
 
-// tampilkan statistik umum
-func tampilkanStatistik() {
-	if len(penilaians) == 0 {
-		fmt.Println("Tidak ada data untuk statistik.")
+func tampilkanstats() {
+	if len(datapenilaian) == 0 {
+		fmt.Println("Belum ada data untuk statistik")
 		return
 	}
 
-	// Hitung kategori
-	kategoriBaik := 0
-	kategoriHiburan := 0
-	kategoriPendampingan := 0
-	kategoriPerawatan := 0
-	totalSkor := 0
+	// hitung distribusi
+	levelcount := make(map[string]int)
+	totalskor := 0
 
-	for _, p := range penilaians {
-		totalSkor += p.TotalSkor
-		switch p.Kategori {
-		case "Sangat ringan":
-			kategoriBaik++
-		case "Ringan":
-			kategoriHiburan++
-		case "Sedang":
-			kategoriPendampingan++
-		case "Tinggi":
-			kategoriPerawatan++
-		case "Sangat tinggi/kritis":
-			kategoriPerawatan++
-		}
+	for _, data := range datapenilaian {
+		levelcount[data.level]++
+		totalskor += data.skor
 	}
 
-	fmt.Printf("\n=== STATISTIK UMUM ===\n")
-	fmt.Printf("Total Penilaian: %d\n", len(penilaians))
-	fmt.Printf("Rata-rata Skor: %.2f\n", float64(totalSkor)/float64(len(penilaians)))
-	fmt.Printf("\nDistribusi Kategori:\n")
-	fmt.Printf("Sangat ringan: %d (%.1f%%)\n", kategoriBaik, float64(kategoriBaik)*100/float64(len(penilaians)))
-	fmt.Printf("Ringan: %d (%.1f%%)\n", kategoriHiburan, float64(kategoriHiburan)*100/float64(len(penilaians)))
-	fmt.Printf("Sedang: %d (%.1f%%)\n", kategoriPendampingan, float64(kategoriPendampingan)*100/float64(len(penilaians)))
-	fmt.Printf("Tinggi & Sangat tinggi/kritis: %d (%.1f%%)\n", kategoriPerawatan, float64(kategoriPerawatan)*100/float64(len(penilaians)))
+	fmt.Printf("\n=== STATISTIK ===\n")
+	fmt.Printf("Total data: %d\n", len(datapenilaian))
+	fmt.Printf("Rata-rata skor: %.1f\n", float64(totalskor)/float64(len(datapenilaian)))
+
+	fmt.Printf("\nDistribusi Level:\n")
+	for level, count := range levelcount {
+		persen := float64(count) * 100 / float64(len(datapenilaian))
+		fmt.Printf("- %s: %d (%.1f%%)\n", level, count, persen)
+	}
 }
 
 func main() {
-	// Data contoh
-	penilaians = append(penilaians,
-		Penilaian{ID: 1, IDPengguna: 1001, Tanggal: time.Now().AddDate(0, 0, -10),
-			Respon:    []int{2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
-			TotalSkor: 20, Kategori: "Ringan"},
-		Penilaian{ID: 2, IDPengguna: 1002, Tanggal: time.Now().AddDate(0, 0, -5),
-			Respon:    []int{3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
-			TotalSkor: 30, Kategori: "Sedang"},
-		Penilaian{ID: 3, IDPengguna: 1001, Tanggal: time.Now().AddDate(0, 0, -2),
-			Respon:    []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-			TotalSkor: 10, Kategori: "Sangat ringan"},
-		Penilaian{ID: 4, IDPengguna: 1003, Tanggal: time.Now().AddDate(0, 0, -1),
-			Respon:    []int{4, 4, 4, 4, 4, 4, 4, 4, 4, 4},
-			TotalSkor: 40, Kategori: "Tinggi"},
+	// data dummy
+	datapenilaian = append(datapenilaian,
+		penilaian{
+			id: 1, idpengguna: 1001,
+			tanggal: time.Now().AddDate(0, 0, -10),
+			jawaban: []int{2, 2, 2, 2, 2, 2, 2, 2, 2, 2},
+			skor:    20, level: "Ringan",
+		},
+		penilaian{
+			id: 2, idpengguna: 1002,
+			tanggal: time.Now().AddDate(0, 0, -5),
+			jawaban: []int{3, 3, 3, 3, 3, 3, 3, 3, 3, 3},
+			skor:    30, level: "Sedang",
+		},
+		penilaian{
+			id: 3, idpengguna: 1001,
+			tanggal: time.Now().AddDate(0, 0, -2),
+			jawaban: []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			skor:    10, level: "Normal",
+		},
 	)
 
-	fmt.Println("=== SISTEM PENILAIAN KESEHATAN MENTAL DASS-10 ===")
-	fmt.Println("Selamat datang di sistem penilaian kesehatan mental!")
+	fmt.Println("=================== SISTEM PENILAIAN KESEHATAN MENTAL ===================")
+	fmt.Println("Selamat datang!")
 
 	for {
-		fmt.Println("\n=== MENU UTAMA ===")
-		fmt.Println("1. Tambah Penilaian Baru")
-		fmt.Println("2. Perbarui Penilaian")
+		fmt.Println("\n=== MENU ===")
+		fmt.Println("1. Tambah Penilaian")
+		fmt.Println("2. Update Penilaian")
 		fmt.Println("3. Hapus Penilaian")
-		fmt.Println("4. Cari Penilaian (Binary Search)")
-		fmt.Println("5. Cari Penilaian (Sequential Search)")
-		fmt.Println("6. Cari Berdasarkan ID Pengguna")
-		fmt.Println("7. Urutkan Berdasarkan Skor (Selection Sort)")
-		fmt.Println("8. Urutkan Berdasarkan Tanggal (Insertion Sort)")
-		fmt.Println("9. Tampilkan Laporan Pengguna")
-		fmt.Println("10. Tampilkan Semua Data")
-		fmt.Println("11. Tampilkan Statistik Umum")
-		fmt.Println("0. Keluar")
+		fmt.Println("4. Cari (Binary Search)")
+		fmt.Println("5. Cari (Sequential Search)")
+		fmt.Println("6. Cari by User ID")
+		fmt.Println("7. Urutkan by Skor")
+		fmt.Println("8. Urutkan by Tanggal")
+		fmt.Println("9. Laporan User")
+		fmt.Println("10. Lihat Semua")
+		fmt.Println("11. Statistik")
+		fmt.Println("0. Exit")
 
 		var pilihan int
-		fmt.Print("\nPilih menu (0-11): ")
+		fmt.Print("\nPilih (0-11): ")
 		fmt.Scan(&pilihan)
 
 		switch pilihan {
 		case 1:
-			var id, idPengguna int
-			fmt.Print("Masukkan ID: ")
+			var id, userid int
+			fmt.Print("ID: ")
 			fmt.Scan(&id)
-			fmt.Print("Masukkan ID Pengguna: ")
-			fmt.Scan(&idPengguna)
-			tambahPenilaian(id, idPengguna)
+			fmt.Print("User ID: ")
+			fmt.Scan(&userid)
+			tambahdata(id, userid)
 
 		case 2:
 			var id int
-			fmt.Print("Masukkan ID yang akan diperbarui: ")
+			fmt.Print("ID yang mau diupdate: ")
 			fmt.Scan(&id)
-			if perbaruiPenilaian(id) {
-				fmt.Println("Penilaian berhasil diperbarui.")
+			if updatedata(id) {
+				fmt.Println("Berhasil diupdate")
 			} else {
-				fmt.Println("Penilaian tidak ditemukan.")
+				fmt.Println("ID tidak ditemukan")
 			}
 
 		case 3:
 			var id int
-			fmt.Print("Masukkan ID yang akan dihapus: ")
+			fmt.Print("ID yang mau dihapus: ")
 			fmt.Scan(&id)
-			if hapusPenilaian(id) {
-				fmt.Println("Penilaian berhasil dihapus.")
+			if hapusdata(id) {
+				fmt.Println("Berhasil dihapus")
 			} else {
-				fmt.Println("Penilaian tidak ditemukan.")
+				fmt.Println("ID tidak ada")
 			}
 
 		case 4:
 			var id int
-			fmt.Print("Masukkan ID yang dicari: ")
+			fmt.Print("Cari ID: ")
 			fmt.Scan(&id)
-			if p := cariBinary(id); p != nil {
-				tampilkanDetailPenilaian(p)
+			if hasil := caribinary(id); hasil != nil {
+				tampilkandetail(hasil)
 			} else {
-				fmt.Println("Penilaian tidak ditemukan.")
+				fmt.Println("Tidak ketemu")
 			}
 
 		case 5:
 			var id int
-			fmt.Print("Masukkan ID yang dicari: ")
+			fmt.Print("Cari ID: ")
 			fmt.Scan(&id)
-			if p := cariSequential(id); p != nil {
-				tampilkanDetailPenilaian(p)
+			if hasil := carisequential(id); hasil != nil {
+				tampilkandetail(hasil)
 			} else {
-				fmt.Println("Penilaian tidak ditemukan.")
+				fmt.Println("Tidak ada")
 			}
 
 		case 6:
-			var idPengguna int
-			fmt.Print("Masukkan ID Pengguna yang dicari: ")
-			fmt.Scan(&idPengguna)
-			hasil := cariByIDPengguna(idPengguna)
+			var userid int
+			fmt.Print("User ID: ")
+			fmt.Scan(&userid)
+			hasil := caridatauser(userid)
 			if len(hasil) > 0 {
-				fmt.Printf("\nDitemukan %d penilaian untuk pengguna ID %d:\n", len(hasil), idPengguna)
-				for _, p := range hasil {
-					fmt.Printf("ID:%d Skor:%d Kategori:%s Tgl:%s\n",
-						p.ID, p.TotalSkor, p.Kategori, p.Tanggal.Format("2006-01-02"))
+				fmt.Printf("\nKetemu %d data untuk user %d:\n", len(hasil), userid)
+				for _, data := range hasil {
+					fmt.Printf("ID:%d | Skor:%d | %s | %s\n",
+						data.id, data.skor, data.level, data.tanggal.Format("02/01/06"))
 				}
 			} else {
-				fmt.Println("Tidak ada penilaian untuk pengguna ini.")
+				fmt.Println("User tidak punya data")
 			}
 
 		case 7:
-			urutkanSelectionBySkor()
+			urutberdasarkanskor()
 
 		case 8:
-			urutkanInsertionByTanggal()
+			urutberdasarkantanggal()
 
 		case 9:
-			var idPengguna int
-			fmt.Print("Masukkan ID Pengguna untuk laporan: ")
-			fmt.Scan(&idPengguna)
-			tampilkanLaporan(idPengguna)
+			var userid int
+			fmt.Print("User ID untuk laporan: ")
+			fmt.Scan(&userid)
+			laporanuser(userid)
 
 		case 10:
-			tampilkanSemua()
+			tampilkansemua()
 
 		case 11:
-			tampilkanStatistik()
+			tampilkanstats()
 
 		case 0:
-			fmt.Println("\nTerima kasih telah menggunakan sistem penilaian kesehatan mental!")
-			fmt.Println("Jaga kesehatan mental Anda. Sampai jumpa!")
+			fmt.Println("\nTerima kasih!")
+			fmt.Println("Jaga kesehatan mental ya!")
 			return
 
 		default:
-			fmt.Println("Pilihan tidak valid. Silakan pilih 0-11.")
+			fmt.Println("Pilihan salah, coba lagi")
 		}
 	}
 }
